@@ -11351,126 +11351,24 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
       const acrylicMat = new THREE.MeshPhysicalMaterial({
-
-
-
-
-
-
-
         color: 0xffffff,
-
-
-
-
-
-
-
         transparent: true,
-
-
-
-
-
-
-
-        opacity: 0.045,
-
-
-
-
-
-
-
-        roughness: 0.035,
-
-
-
-
-
-
-
+        opacity: 0.078,
+        roughness: 0.012,
         metalness: 0,
-
-
-
-
-
-
-
-        reflectivity: 0.65,
-
-
-
-
-
-
-
+        reflectivity: 0.92,
         clearcoat: 1.0,
-
-
-
-
-
-
-
-        clearcoatRoughness: 0.03,
-
-
-
-
-
-
-
+        clearcoatRoughness: 0.010,
         depthWrite: false,
-
-
-
-
-
-
-
-        side: THREE.FrontSide
-
-
-
-
-
-
-
+        side: THREE.DoubleSide
       });
-
-
-
-
-
-
-
       const acrylicSideMat = acrylicMat.clone();
-
-
-
-
-
-
-
-      acrylicSideMat.opacity = 0.085;
-
-
-
-
-
-
-
-      acrylicSideMat.roughness = 0.045;
-
-
-
-
-
-
-
-      acrylicSideMat.reflectivity = 0.70;
+      acrylicSideMat.opacity = 0.185;
+      acrylicSideMat.roughness = 0.015;
+      acrylicSideMat.reflectivity = 0.96;
+      acrylicSideMat.clearcoat = 1.0;
+      acrylicSideMat.clearcoatRoughness = 0.012;
+      acrylicSideMat.side = THREE.DoubleSide;
 
 
 
@@ -12048,7 +11946,8 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
             vec3 Hfill = normalize(Lfill + V);
             float specKey = pow(max(dot(N, Hkey), 0.0), 64.0);
             float specFill = pow(max(dot(N, Hfill), 0.0), 42.0);
-            vec3 rimCatchlight = vec3(1.0) * (specKey * 2.8 + specFill * 1.4) * (0.35 + 1.65 * vPlasticRim);
+            float specSharpen = pow(max(dot(N, Hkey), 0.0), 96.0);
+          vec3 rimCatchlight = vec3(1.0) * (specKey * 2.8 + specSharpen * 3.5 + specFill * 1.8) * (0.45 + 2.4 * vPlasticRim);
 
             // 6. Refracted Light Piped along the Moulded Walls
             float pipedAmount = clamp(vPlasticRim * (1.0 - reflectance) * (1.0 - transScalar)
@@ -12075,8 +11974,8 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
         };
       }
 
-      installAcrylicReflection(acrylicMat, { thickness: 3.0, edgeThickness: 6.5, ior: 1.4914, rimGain: 1.60 });
-      installAcrylicReflection(acrylicSideMat, { thickness: 3.0, edgeThickness: 6.5, ior: 1.4914, rimGain: 1.65 });
+      installAcrylicReflection(acrylicMat, { thickness: 3.0, edgeThickness: 7.2, ior: 1.4914, rimGain: 2.25, edgeSheen: 0.32 });
+      installAcrylicReflection(acrylicSideMat, { thickness: 3.0, edgeThickness: 8.5, ior: 1.4914, rimGain: 2.50, edgeSheen: 0.38 });
 
 
 
@@ -12116,7 +12015,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-      const frontPlateGeo = createAcrylicPanelGeometry(131, 131, 3, 0.42);
+      const frontPlateGeo = createAcrylicPanelGeometry(131, 131, 3, 0.68);
 
 
 
@@ -12133,14 +12032,15 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
       registerPickable(frontPlateMesh, 'acrylicCase');
-
-
-
-
-
-
-
       frontPlateGroup.add(frontPlateMesh);
+
+      // Inner Cavity Optical Sheen (Attached to frontPlateGroup for 100% synchronized motion in all exploded/knolling modes)
+      const frontInnerSheenMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.055, roughness: 0.015, reflectivity: 0.90, clearcoat: 1.0, clearcoatRoughness: 0.01, side: THREE.DoubleSide, depthWrite: false
+      });
+      const frontInnerSheen = new THREE.Mesh(new THREE.PlaneGeometry(127, 127), frontInnerSheenMat);
+      frontInnerSheen.position.z = -1.48;
+      frontPlateGroup.add(frontInnerSheen);
 
 
 
@@ -12588,7 +12488,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-      const backPlateGeo = createAcrylicPanelGeometry(131, 131, 3, 0.42);
+      const backPlateGeo = createAcrylicPanelGeometry(131, 131, 3, 0.68);
 
 
 
@@ -12605,14 +12505,15 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
       registerPickable(backPlateMesh, 'acrylicCase');
-
-
-
-
-
-
-
       backPlateGroup.add(backPlateMesh);
+
+      // Inner Cavity Optical Sheen (Attached to backPlateGroup for 100% synchronized motion)
+      const backInnerSheenMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff, transparent: true, opacity: 0.055, roughness: 0.015, reflectivity: 0.90, clearcoat: 1.0, clearcoatRoughness: 0.01, side: THREE.DoubleSide, depthWrite: false
+      });
+      const backInnerSheen = new THREE.Mesh(new THREE.PlaneGeometry(127, 127), backInnerSheenMat);
+      backInnerSheen.position.z = 1.48;
+      backPlateGroup.add(backInnerSheen);
 
 
 
@@ -12660,7 +12561,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-      const sideStripGeo = createAcrylicPanelGeometry(3, 131, 10, 0.45);
+      const sideStripGeo = createAcrylicPanelGeometry(3, 131, 10, 0.72);
 
 
 
@@ -13380,22 +13281,10 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-      [acrylicMat,acrylicSideMat].forEach(function(material){
-
-
-
-
-
-
-
-        material.envMap=acrylicEnvironmentTarget.texture;material.envMapIntensity=0.95;material.needsUpdate=true;
-
-
-
-
-
-
-
+      [acrylicMat, acrylicSideMat, frontInnerSheenMat, backInnerSheenMat].forEach(function(material){
+        material.envMap = acrylicEnvironmentTarget.texture;
+        material.envMapIntensity = 1.85;
+        material.needsUpdate = true;
       });
 
 

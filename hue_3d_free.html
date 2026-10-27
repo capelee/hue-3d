@@ -2559,13 +2559,22 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
       <div id="lenticularAngleIndicator" class="absolute bottom-3 sm:bottom-4 right-2 sm:right-3 z-20 glass-panel rounded-2xl p-2.5 shadow-xl border border-white/70 text-xs w-36 sm:w-40 backdrop-blur-xl transition-all select-none cursor-pointer" title="點擊切換視角連動 / 手動鎖定">
-        <!-- Minimal Top Controls: Status Dot & Close Button -->
+        <!-- Minimal Top Controls: Status Dot, Gyro Toggle & Close Button -->
         <div class="flex items-center justify-between mb-1 px-0.5">
           <div class="flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <span id="lentHudStatusDot" class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
             <span class="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider font-mono">Lenticular</span>
           </div>
-          <button type="button" id="btnCloseLentHud" class="w-4 h-4 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-black/5 transition text-xs leading-none" title="關閉 HUD">×</button>
+          <div class="flex items-center gap-1">
+            <button type="button" id="btnToggleGyroHud" class="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-black/5 transition" title="手機手持體感傾斜 (Gyroscope)">
+              <svg class="w-3.5 h-3.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="3" width="12" height="18" rx="2"/>
+                <line x1="10" y1="18" x2="14" y2="18"/>
+                <path d="M2 12h2M20 12h2"/>
+              </svg>
+            </button>
+            <button type="button" id="btnCloseLentHud" class="w-4 h-4 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-black/5 transition text-xs leading-none" title="關閉 HUD">×</button>
+          </div>
         </div>
 
         <!-- Gauge Arc Visualizer -->
@@ -5507,6 +5516,22 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
+
+            <!-- Gyroscope Tilt Integration -->
+            <div class="pt-2 border-t border-slate-800">
+              <button type="button" id="btnToggleGyro" class="w-full py-1.5 px-3 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center justify-between transition">
+                <div class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="6" y="3" width="12" height="18" rx="2"/>
+                    <line x1="10" y1="18" x2="14" y2="18"/>
+                    <path d="M2 12h2M20 12h2"/>
+                  </svg>
+                  <span>手機手持體感傾斜</span>
+                </div>
+                <span id="txtToggleGyro" class="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-400">關閉</span>
+              </button>
+              <div class="text-[9.5px] text-slate-400 mt-1 px-1">支援手機與平板陀螺儀，手持前後/左右傾斜即時變換光柵圖面</div>
+            </div>
 
             <!-- Axis & Presentation Settings -->
 
@@ -37794,7 +37819,11 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-          if (e.target.closest('#btnCloseLentHud') || e.target.closest('#btnMinLentHud')) return;
+          if (e.target.closest('#btnCloseLentHud') || e.target.closest('#btnMinLentHud') || e.target.closest('#btnToggleGyroHud')) return;
+          if (isGyroActive) {
+            neutralTilt = null; // Tapping HUD resets neutral hold angle
+            return;
+          }
 
 
 
@@ -37891,605 +37920,124 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
       // Gyroscope / DeviceOrientation Feature for Mobile & Tablet Lenticular Tilt
-
-
-
-
-
-
+      let isGyroActive = false;
+      let neutralTilt = null; // Calibrated zero point
+      let rawTiltTarget = 0.5;
+      let currentGyroPhase = 0.5;
 
       const btnToggleGyro = document.getElementById('btnToggleGyro');
-
-
-
-
-
-
-
       const txtToggleGyro = document.getElementById('txtToggleGyro');
-
-
-
-
-
-
-
-      let isGyroActive = false;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      const btnToggleGyroHud = document.getElementById('btnToggleGyroHud');
+      const lentHudStatusDot = document.getElementById('lentHudStatusDot');
 
       function handleDeviceOrientation(e) {
-
-
-
-
-
-
-
         if (!isGyroActive) return;
 
+        let rawAngle = 0;
+        const isLandscape = Math.abs(window.orientation || 0) === 90;
 
-
-
-
-
-
-        let tilt = e.gamma;
-
-
-
-
-
-
-
-        if (Math.abs(window.orientation || 0) === 90) {
-
-
-
-
-
-
-
-          tilt = (window.orientation === 90) ? -e.beta : e.beta;
-
-
-
-
-
-
-
+        if (state.lenticularAxis === 'vertical') {
+          // Vertical lenticular: pitch / beta
+          rawAngle = (e.beta !== null && e.beta !== undefined) ? e.beta : 0;
+        } else {
+          // Horizontal lenticular: roll / gamma (or beta in landscape)
+          if (isLandscape) {
+            rawAngle = (window.orientation === 90) ? -e.beta : e.beta;
+          } else {
+            rawAngle = (e.gamma !== null && e.gamma !== undefined) ? e.gamma : 0;
+          }
         }
 
-
-
-
-
-
-
-        if (tilt === null || tilt === undefined) return;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        const clampedTilt = THREE.MathUtils.clamp(tilt, -30, 30);
-
-
-
-
-
-
-
-        const targetPhase = THREE.MathUtils.clamp(0.5 + (clampedTilt / 30) * 0.5, 0.0, 1.0);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        state.lenticularAuto = false;
-
-
-
-
-
-
-
-        state.lenticularManualPhase = targetPhase;
-
-
-
-
-
-
-
-        if (sliderLentAngle) sliderLentAngle.value = Math.round(targetPhase * 100);
-
-
-
-
-
-
-
-        if (valLentAngle) {
-
-
-
-
-
-
-
-          const sign = clampedTilt >= 0 ? '+' : '';
-
-
-
-
-
-
-
-          valLentAngle.textContent = `體感 ${sign}${clampedTilt.toFixed(1)}° (${Math.round(targetPhase * 100)}%)`;
-
-
-
-
-
-
-
+        // Calibrate neutral holding angle on initial reading
+        if (neutralTilt === null) {
+          neutralTilt = rawAngle;
         }
 
-
-
-
-
-
-
-        updateLentButtonsUI();
-
-
-
-
-
-
-
+        // Relative deviation from calibrated posture
+        const deltaTilt = rawAngle - neutralTilt;
+        const maxRange = 22.0; // ±22 degrees tilt yields full phase traverse
+        const clampedDelta = THREE.MathUtils.clamp(deltaTilt, -maxRange, maxRange);
+        rawTiltTarget = THREE.MathUtils.clamp(0.5 + (clampedDelta / maxRange) * 0.5, 0.0, 1.0);
       }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+      function updateGyroUI() {
+        if (btnToggleGyro) {
+          btnToggleGyro.classList.toggle('border-emerald-500/80', isGyroActive);
+          btnToggleGyro.classList.toggle('bg-emerald-500/20', isGyroActive);
+          btnToggleGyro.classList.toggle('text-emerald-300', isGyroActive);
+        }
+        if (txtToggleGyro) {
+          txtToggleGyro.textContent = isGyroActive ? '體感開啟中' : '關閉';
+          txtToggleGyro.className = 'text-[10px] px-2 py-0.5 rounded border ' +
+            (isGyroActive ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400' : 'bg-slate-900 text-slate-400 border-slate-700');
+        }
+        if (btnToggleGyroHud) {
+          btnToggleGyroHud.classList.toggle('text-emerald-400', isGyroActive);
+          btnToggleGyroHud.classList.toggle('bg-emerald-500/20', isGyroActive);
+          btnToggleGyroHud.classList.toggle('ring-1', isGyroActive);
+          btnToggleGyroHud.classList.toggle('ring-emerald-400/50', isGyroActive);
+          btnToggleGyroHud.classList.toggle('text-slate-400', !isGyroActive);
+          btnToggleGyroHud.title = isGyroActive ? '體感傾斜運行中（點擊關閉，點擊面板中心可重校準零點）' : '開啟手機手持體感傾斜 (Gyroscope)';
+        }
+        if (lentHudStatusDot) {
+          lentHudStatusDot.className = 'w-1.5 h-1.5 rounded-full ' +
+            (isGyroActive ? 'bg-emerald-400 animate-ping' : 'bg-amber-400 animate-pulse');
+        }
+      }
 
       function startGyroTracking() {
-
-
-
-
-
-
-
+        neutralTilt = null;
+        rawTiltTarget = state.lenticularManualPhase || 0.5;
+        currentGyroPhase = rawTiltTarget;
+        state.lenticularAuto = false;
         window.addEventListener('deviceorientation', handleDeviceOrientation, true);
-
-
-
-
-
-
-
         isGyroActive = true;
-
-
-
-
-
-
-
-        if (btnToggleGyro) {
-
-
-
-
-
-
-
-          btnToggleGyro.classList.remove('border-purple-500/30', 'bg-slate-900/90', 'text-purple-300');
-
-
-
-
-
-
-
-          btnToggleGyro.classList.add('border-emerald-500/80', 'bg-emerald-500/25', 'text-emerald-300');
-
-
-
-
-
-
-
-        }
-
-
-
-
-
-
-
-        if (txtToggleGyro) txtToggleGyro.textContent = '陀螺儀開';
-
-
-
-
-
-
-
+        updateGyroUI();
       }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
       function stopGyroTracking() {
-
-
-
-
-
-
-
         window.removeEventListener('deviceorientation', handleDeviceOrientation, true);
-
-
-
-
-
-
-
         isGyroActive = false;
-
-
-
-
-
-
-
-        if (btnToggleGyro) {
-
-
-
-
-
-
-
-          btnToggleGyro.classList.remove('border-emerald-500/80', 'bg-emerald-500/25', 'text-emerald-300');
-
-
-
-
-
-
-
-          btnToggleGyro.classList.add('border-purple-500/30', 'bg-slate-900/90', 'text-purple-300');
-
-
-
-
-
-
-
-        }
-
-
-
-
-
-
-
-        if (txtToggleGyro) txtToggleGyro.textContent = '陀螺儀';
-
-
-
-
-
-
-
+        neutralTilt = null;
+        updateGyroUI();
       }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
       function toggleGyro() {
-
-
-
-
-
-
-
-        if (isTourActive) stopTour();
-
-
-
-
-
-
-
+        if (typeof isTourActive !== 'undefined' && isTourActive && typeof stopTour === 'function') stopTour();
         if (isGyroActive) {
-
-
-
-
-
-
-
           stopGyroTracking();
-
-
-
-
-
-
-
           return;
-
-
-
-
-
-
-
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        // iOS 13+ permission request flow
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-
-
-
-
-
-
-
           DeviceOrientationEvent.requestPermission()
-
-
-
-
-
-
-
             .then(function (permissionState) {
-
-
-
-
-
-
-
               if (permissionState === 'granted') {
-
-
-
-
-
-
-
                 startGyroTracking();
-
-
-
-
-
-
-
               } else {
-
-
-
-
-
-
-
-                alert('陀螺儀存取權限已被拒絕。請至裝置「設定」允許瀏覽器存取動作與方向。');
-
-
-
-
-
-
-
+                alert('陀螺儀存取權限已被拒絕。若欲使用體感功能，請至系統「設定」>「Safari」允許動作與方向存取。');
               }
-
-
-
-
-
-
-
             })
-
-
-
-
-
-
-
             .catch(function (err) {
-
-
-
-
-
-
-
               console.warn('DeviceOrientation error:', err);
-
-
-
-
-
-
-
               startGyroTracking();
-
-
-
-
-
-
-
             });
-
-
-
-
-
-
-
         } else if (window.DeviceOrientationEvent) {
-
-
-
-
-
-
-
           startGyroTracking();
-
-
-
-
-
-
-
         } else {
-
-
-
-
-
-
-
-          alert('您的裝置或環境不支援陀螺儀感應器。');
-
-
-
-
-
-
-
+          alert('您的裝置或瀏覽器不支援陀螺儀感應器。');
         }
-
-
-
-
-
-
-
       }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       if (btnToggleGyro) {
-
-
-
-
-
-
-
         btnToggleGyro.addEventListener('click', toggleGyro);
-
-
-
-
-
-
-
+      }
+      if (btnToggleGyroHud) {
+        btnToggleGyroHud.addEventListener('click', function (e) {
+          e.stopPropagation();
+          toggleGyro();
+        });
       }
 
 
@@ -41926,101 +41474,28 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
         if (labelEl) {
-
-
-
-
-
-
-
           const sign = angleDeg >= 0 ? '+' : '';
-
-
-
-
-
-
-
-          labelEl.textContent = `${sign}${angleDeg.toFixed(1)}° ・ ${phaseShort}`;
-
-
-
-
-
-
-
+          labelEl.textContent = isGyroActive
+            ? `體感 ${sign}${angleDeg.toFixed(1)}° ・ ${phaseShort}`
+            : `${sign}${angleDeg.toFixed(1)}° ・ ${phaseShort}`;
         }
-
-
-
-
-
-
 
         if (subEl) {
-
-
-
-
-
-
-
           const axisName = state.lenticularAxis === 'vertical' ? '橫條紋 (上下俯仰)' : '直條紋 (左右轉動)';
-
-
-
-
-
-
-
-          subEl.textContent = state.lenticularAuto ? `即時視角連動 (${axisName})` : '手動角度鎖定中';
-
-
-
-
-
-
-
+          subEl.textContent = isGyroActive
+            ? `手機體感傾斜 (${axisName})`
+            : (state.lenticularAuto ? `即時視角連動 (${axisName})` : '手動角度鎖定中');
         }
 
-
-
-
-
-
-
         if (hudTagEl) {
-
-
-
-
-
-
-
-          hudTagEl.textContent = state.lenticularAuto ? '視角連動' : '手動鎖定';
-
-
-
-
-
-
-
-          hudTagEl.className = 'text-[9px] px-1.5 py-0.5 rounded border ' +
-
-
-
-
-
-
-
-            (state.lenticularAuto ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-slate-700/60 text-slate-300 border-slate-600');
-
-
-
-
-
-
-
+          if (isGyroActive) {
+            hudTagEl.textContent = '體感連動';
+            hudTagEl.className = 'text-[9px] px-1.5 py-0.5 rounded border bg-emerald-500/20 text-emerald-300 border-emerald-500/40 animate-pulse';
+          } else {
+            hudTagEl.textContent = state.lenticularAuto ? '視角連動' : '手動鎖定';
+            hudTagEl.className = 'text-[9px] px-1.5 py-0.5 rounded border ' +
+              (state.lenticularAuto ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-slate-700/60 text-slate-300 border-slate-600');
+          }
         }
 
 
@@ -43677,15 +43152,19 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
+          if (isGyroActive) {
+            // Smooth Lerp filter for silky anti-jitter transition
+            currentGyroPhase += (rawTiltTarget - currentGyroPhase) * 0.20;
+            state.lenticularManualPhase = currentGyroPhase;
+            const sliderLent = document.getElementById('sliderLentAngle');
+            if (sliderLent) sliderLent.value = Math.round(currentGyroPhase * 100);
+          }
+
           let dominantPhase = state.lenticularManualPhase;
-
-
-
-
-
-
-
           let tiltAngleDeg = (dominantPhase - 0.5) * 60;
+          if (isGyroActive) {
+            tiltAngleDeg = (dominantPhase - 0.5) * 44;
+          }
 
 
 

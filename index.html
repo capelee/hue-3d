@@ -2120,19 +2120,11 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
     /* ==========================================================================
-       Mobile Plan C: Fullscreen Gesture First UI Architecture (Pure Minimalist)
+       Mobile Plan C: Fullscreen Gesture First UI Architecture (Zero Top Header & Logo)
        ========================================================================== */
     @media (max-width: 767px) {
+      /* Mobile: Completely collapse and hide top header, logo & borders - 100% pure fullscreen */
       #topHeader {
-        background: transparent !important;
-        border-bottom: none !important;
-        pointer-events: none;
-      }
-      #topHeader .left-1\/2 {
-        pointer-events: auto;
-      }
-      #viewportQuickToggles,
-      #topHeader .gap-1\.5.shrink-0 {
         display: none !important;
       }
       #partInspector {
@@ -2178,18 +2170,19 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
       /* Touch interaction auto-fade */
       body.mobile-touch-active #floatingDock,
       body.mobile-touch-active #btnMobileDockToggle,
-      body.mobile-touch-active #freeDragHudPill,
-      body.mobile-touch-active #topHeader {
+      body.mobile-touch-active #freeDragHudPill {
         opacity: 0.18 !important;
         transition: opacity 0.22s ease;
       }
     }
     @media (min-width: 768px) {
+      #topHeader {
+        display: flex !important;
+      }
       #btnMobileDockToggle {
         display: none !important;
       }
     }
-  
 
     #floatingDock, #floatingDock * {
       scrollbar-width: none !important;

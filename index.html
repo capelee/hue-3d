@@ -28582,6 +28582,27 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
+
+      // ============================================================================
+      // Web Haptics Feedback Engine (Mobile & Touch Tactile Ergonomics)
+      // ============================================================================
+      function triggerHaptic(type) {
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+          try {
+            if (type === 'light') {
+              navigator.vibrate(8); // 8ms subtle tap
+            } else if (type === 'medium') {
+              navigator.vibrate(14); // 14ms view switch confirm
+            } else if (type === 'snap') {
+              navigator.vibrate([10, 26, 16]); // double mechanical snap feel
+            } else if (type === 'tick') {
+              navigator.vibrate(5); // 5ms micro tick
+            }
+          } catch (err) {}
+        }
+      }
+      window.triggerHaptic = triggerHaptic;
+
       function updateCameraFromSpherical() {
 
 
@@ -28590,39 +28611,12 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-        // Smooth damping toward targetSpherical
-
-
-
-
-
-
-
-        camSpherical.radius += (targetSpherical.radius - camSpherical.radius) * 0.16;
-
-
-
-
-
-
-
-        camSpherical.theta += (targetSpherical.theta - camSpherical.theta) * 0.16;
-
-
-
-
-
-
-
-        camSpherical.phi += (targetSpherical.phi - camSpherical.phi) * 0.16;
-
-
-
-
-
-
-
-        camSpherical.target.lerp(targetSpherical.target, 0.16);
+                // Dynamic inertial damping: 0.18 when touching for crisp response, 0.095 when released for silky gliding
+        const curDamp = (window._isTouchingModel || isDragging || isHandleDrag || isCDDrag) ? 0.18 : 0.098;
+        camSpherical.radius += (targetSpherical.radius - camSpherical.radius) * curDamp;
+        camSpherical.theta += (targetSpherical.theta - camSpherical.theta) * curDamp;
+        camSpherical.phi += (targetSpherical.phi - camSpherical.phi) * curDamp;
+        camSpherical.target.lerp(targetSpherical.target, curDamp);
 
 
 
@@ -29150,7 +29144,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-        targetSpherical.radius = Math.max(50, Math.min(1000, targetSpherical.radius * zoomFactor));
+        targetSpherical.radius = Math.max(165, Math.min(880, targetSpherical.radius * zoomFactor));
 
 
 
@@ -29767,13 +29761,9 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
           const newPull = Math.max(-100, Math.min(100, Math.round(handleStartPull - dy * 0.45)));
-
-
-
-
-
-
-
+          if ((newPull === -100 && state.pull !== -100) || (newPull === 0 && state.pull !== 0)) {
+            triggerHaptic('snap');
+          }
           state.pull = newPull;
 
 
@@ -29878,15 +29868,8 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-          targetSpherical.theta -= dx * 0.007;
-
-
-
-
-
-
-
-          targetSpherical.phi = Math.max(0.05, Math.min(Math.PI * 0.495, targetSpherical.phi + dy * 0.006));
+          targetSpherical.theta -= dx * 0.0058;
+          targetSpherical.phi = Math.max(0.08, Math.min(Math.PI * 0.485, targetSpherical.phi + dy * 0.0052));
 
 
 
@@ -29958,7 +29941,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-            targetSpherical.radius = Math.max(50, Math.min(1000, touchStartRadius * factor));
+            targetSpherical.radius = Math.max(165, Math.min(880, touchStartRadius * factor));
 
 
 
@@ -33959,6 +33942,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
       function applyPresetMode(mode, instant = false) {
+        triggerHaptic('medium');
         window.applyPresetMode = applyPresetMode;
         if (typeof groundGroup !== 'undefined' && state.showBackdrop !== false) {
           groundGroup.visible = true;
@@ -42996,6 +42980,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
           if (diffSum < 0.4 && isTweeningKinematics) {
+            triggerHaptic('snap');
 
 
 
@@ -47053,6 +47038,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
       if (btnMobileDockToggle) {
         btnMobileDockToggle.addEventListener('click', function (e) {
+          triggerHaptic('light');
           e.preventDefault();
           e.stopPropagation();
           // Seamlessly start gyroscope if available without requiring separate UI button

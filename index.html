@@ -2124,15 +2124,33 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
        ========================================================================== */
     @media (max-width: 767px) {
       #topHeader {
-        background: transparent !important;
-        border-bottom: none !important;
-        pointer-events: none;
+        background: rgba(15, 23, 42, 0.85) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.15) !important;
+        pointer-events: auto !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
       }
       #topHeader .left-1\/2 {
         pointer-events: auto;
       }
-      #viewportQuickToggles,
+      /* On mobile, show core quick toggles with compact spacing */
+      #viewportQuickToggles {
+        display: flex !important;
+        gap: 4px !important;
+      }
+      #btnToggleLabels,
+      #btnRgbLightMenu,
+      #btnAutoRotate {
+        display: none !important;
+      }
       #topHeader .gap-1\.5.shrink-0 {
+        display: flex !important;
+        gap: 4px !important;
+      }
+      #btnZenMode,
+      #btnSpecModal {
         display: none !important;
       }
       #partInspector {
@@ -2146,8 +2164,15 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
         transform: translateX(-50%) !important;
         max-width: 90vw !important;
       }
+      /* Lenticular HUD is enabled on mobile with compact styling */
       #lenticularAngleIndicator {
-        display: none !important;
+        display: block !important;
+        bottom: 16px !important;
+        right: 8px !important;
+        width: 132px !important;
+        padding: 8px !important;
+        border-radius: 14px !important;
+        pointer-events: auto !important;
       }
       #labels3dContainer,
       .label-3d-item {
@@ -2157,7 +2182,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
       #floatingDock {
         display: none !important;
       }
-      /* Mobile FAB button (Centering locked, no hover drift) */
+      /* Mobile FAB buttons (Centering locked, no hover drift) */
       #btnMobileDockToggle {
         display: flex !important;
         left: 50% !important;
@@ -2167,22 +2192,14 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
         transition: opacity 0.22s ease, transform 0.15s ease !important;
         pointer-events: auto !important;
       }
-      #btnMobileDockToggle:hover {
-        left: 50% !important;
-        right: auto !important;
-        transform: translateX(-50%) !important;
-        -webkit-transform: translateX(-50%) !important;
-      }
-      #btnMobileDockToggle:active,
-      #btnMobileDockToggle:focus {
-        left: 50% !important;
-        right: auto !important;
-        transform: translateX(-50%) scale(0.95) !important;
-        -webkit-transform: translateX(-50%) scale(0.95) !important;
+      #btnMobileGyroFab {
+        display: flex !important;
+        pointer-events: auto !important;
       }
       /* Touch interaction auto-fade */
       body.mobile-touch-active #floatingDock,
       body.mobile-touch-active #btnMobileDockToggle,
+      body.mobile-touch-active #btnMobileGyroFab,
       body.mobile-touch-active #freeDragHudPill,
       body.mobile-touch-active #topHeader {
         opacity: 0.18 !important;
@@ -2864,6 +2881,15 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
               </button>
             </nav>
     <!-- Mobile Single Next-View Button (No Dock, No Text, Icon Only, Tap to Cycle Views) -->
+    <!-- Mobile Dedicated Gyroscope FAB (Bottom Left, 44px Circle, One-Tap Tilt Toggle) -->
+    <button type="button" id="btnMobileGyroFab" class="md:hidden fixed bottom-5 left-4 z-50 w-11 h-11 rounded-full bg-white/92 backdrop-blur-2xl border border-black/[0.08] shadow-lg shadow-black/10 flex items-center justify-center text-slate-700 transition active:scale-95 cursor-pointer select-none" aria-label="手機手持體感傾斜連動" title="開啟手機手持體感 (Gyroscope)">
+      <svg id="iconMobileGyro" class="w-5 h-5 text-slate-700 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="6" y="3" width="12" height="18" rx="2"/>
+        <line x1="10" y1="18" x2="14" y2="18"/>
+        <path d="M2 12h2M20 12h2"/>
+      </svg>
+    </button>
+
     <button type="button" id="btnMobileDockToggle" class="hidden fixed bottom-5 z-50 w-11 h-11 rounded-full bg-white/92 backdrop-blur-2xl border border-black/[0.08] shadow-lg shadow-black/10 flex items-center justify-center text-slate-700 transition active:scale-95 cursor-pointer select-none" style="left: 50% !important; transform: translateX(-50%) !important;" aria-label="切換下一個視圖" title="切換下一個視圖">
       <svg id="iconMobileNextView" class="w-5 h-5 text-slate-700 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
@@ -37971,6 +37997,22 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
           txtToggleGyro.className = 'text-[10px] px-2 py-0.5 rounded border ' +
             (isGyroActive ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400' : 'bg-slate-900 text-slate-400 border-slate-700');
         }
+        const btnMobileGyroFab = document.getElementById('btnMobileGyroFab');
+        const iconMobileGyro = document.getElementById('iconMobileGyro');
+        if (btnMobileGyroFab) {
+          btnMobileGyroFab.classList.toggle('border-emerald-400', isGyroActive);
+          btnMobileGyroFab.classList.toggle('bg-emerald-500/20', isGyroActive);
+          btnMobileGyroFab.classList.toggle('text-emerald-400', isGyroActive);
+          btnMobileGyroFab.classList.toggle('shadow-emerald-500/30', isGyroActive);
+          btnMobileGyroFab.classList.toggle('ring-2', isGyroActive);
+          btnMobileGyroFab.classList.toggle('ring-emerald-400/60', isGyroActive);
+          if (iconMobileGyro) {
+            iconMobileGyro.classList.toggle('text-emerald-400', isGyroActive);
+            iconMobileGyro.classList.toggle('text-slate-700', !isGyroActive);
+          }
+          btnMobileGyroFab.title = isGyroActive ? '體感傾斜運行中（點擊關閉）' : '開啟手機手持體感 (Gyroscope)';
+        }
+
         if (btnToggleGyroHud) {
           btnToggleGyroHud.classList.toggle('text-emerald-400', isGyroActive);
           btnToggleGyroHud.classList.toggle('bg-emerald-500/20', isGyroActive);
@@ -38033,6 +38075,14 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
       if (btnToggleGyro) {
         btnToggleGyro.addEventListener('click', toggleGyro);
       }
+      const btnMobileGyroFab = document.getElementById('btnMobileGyroFab');
+      if (btnMobileGyroFab) {
+        btnMobileGyroFab.addEventListener('click', function (e) {
+          e.stopPropagation();
+          toggleGyro();
+        });
+      }
+
       if (btnToggleGyroHud) {
         btnToggleGyroHud.addEventListener('click', function (e) {
           e.stopPropagation();

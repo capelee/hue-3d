@@ -27703,7 +27703,7 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
 
         lyricStackGroup.position.set(THREE.MathUtils.lerp(160*explodeHRatio,0,K),THREE.MathUtils.lerp(0,-85,K),THREE.MathUtils.lerp(2.25+explodeRatio*22+12*explodeHRatio,2.0,K));
         // [方案A] 成盒/閉合狀態純淨收納：當完全組裝成盒且未抽出/未展開/未爆炸/未平鋪時，隱藏歌詞卡以消除CD中心孔穿模與四角溢出碎字
-        const isAssembledClosed = (drawerRatio <= 0.02 && unfoldRatio <= 0.02 && explodeRatio <= 0.005 && explodeHRatio <= 0.005 && K <= 0.005 && fanRatio <= 0.005 && dockTarget === 'none');
+        const isAssembledClosed = (pullRatio <= 0.02 && unfoldRatio <= 0.02 && explodeRatio <= 0.005 && explodeHRatio <= 0.005 && K <= 0.005 && fanRatio <= 0.005 && (!state.lyricDockTarget || state.lyricDockTarget === 'none'));
         lyricStackGroup.visible = !isAssembledClosed;
 
 

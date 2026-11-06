@@ -2328,6 +2328,14 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
             <span id="iconActiveLight" class="hidden"></span>
             <span id="txtActiveLight" class="hidden"></span>
           </button>
+
+          <!-- Minimalist Album Music & Lyrics Player Toggle Button -->
+          <button type="button" id="btnToggleMusicPlayer" data-tooltip="專輯音樂與歌詞播放器 (M)" class="w-8 h-8 rounded-lg border border-slate-200/80 bg-white/85 text-slate-700 hover:bg-slate-100 transition shadow-xs flex items-center justify-center relative">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+            </svg>
+            <span id="dotMusicPlaying" class="hidden absolute bottom-1 right-1 w-2 h-2 rounded-full bg-rose-500 border border-white shadow-xs animate-pulse"></span>
+          </button>
           <button type="button" id="btnAutoRotate" data-tooltip="360° 自轉 (空白鍵)" class="w-8 h-8 rounded-lg border border-slate-200/80 bg-white/85 text-slate-700 hover:bg-slate-100 transition shadow-xs flex items-center justify-center">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             <span id="iconAutoRotate" class="hidden"></span>
@@ -42475,6 +42483,9 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
         const nextMode = (state.contentOrientation === 'vertical') ? 'horizontal' : 'vertical';
         window.setContentOrientation(nextMode);
       };
+      window.set3dCdSpinVelocity = function (v) {
+        cdAngularVelocity = v;
+      };
 
       const btnToggleContentOrientEl = document.getElementById('btnToggleContentOrient');
       if (btnToggleContentOrientEl) {
@@ -43456,6 +43467,619 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
 
 
 
+
+
+  <style>
+    #albumMusicPlayerModal {
+      background: rgba(255, 255, 255, 0.94) !important;
+      backdrop-filter: blur(28px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+      border: 1px solid rgba(15, 23, 42, 0.08) !important;
+      box-shadow: 0 24px 54px -12px rgba(15, 23, 42, 0.16), 0 4px 14px -2px rgba(15, 23, 42, 0.05) !important;
+      color: #0f172a !important;
+    }
+    body.zen-mode #albumMusicPlayerModal {
+      display: none !important;
+    }
+    /* Mini Spinning Transparent V2 CD */
+    .mini-cd-well {
+      width: 96px;
+      height: 96px;
+      border-radius: 9999px;
+      background: radial-gradient(circle at 35% 30%, #334155 0%, #1e293b 62%, #0f172a 100%);
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.55), 0 2px 8px rgba(15,23,42,0.12);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .mini-cd-rotor {
+      width: 90px;
+      height: 90px;
+      border-radius: 9999px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      will-change: transform;
+    }
+    /* 12cm clear polycarbonate outer rim */
+    .mini-cd-clear-outer {
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      border: 1.5px solid rgba(255, 255, 255, 0.42);
+      background: radial-gradient(circle, rgba(255,255,255,0.02) 52%, rgba(255,255,255,0.13) 68%, rgba(255,255,255,0.08) 96%, rgba(255,255,255,0.35) 100%);
+      pointer-events: none;
+    }
+    /* 8cm inner metallic silver data area (66.7% of 12cm) */
+    .mini-cd-silver-inner {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 9999px;
+      background: conic-gradient(
+        from 0deg,
+        #cbd5e1 0deg,
+        #f8fafc 45deg,
+        #94a3b8 95deg,
+        #e2e8f0 140deg,
+        #cbd5e1 180deg,
+        #f1f5f9 225deg,
+        #94a3b8 275deg,
+        #e2e8f0 320deg,
+        #cbd5e1 360deg
+      );
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      box-shadow: 0 0 8px rgba(0,0,0,0.25);
+      pointer-events: none;
+    }
+    /* Iridescent rainbow diffraction sheen on 8cm area */
+    .mini-cd-iridescence {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 9999px;
+      background: conic-gradient(
+        from 30deg,
+        rgba(239,68,68,0.16),
+        rgba(34,197,94,0.16),
+        rgba(59,130,246,0.18),
+        rgba(168,85,247,0.14),
+        rgba(239,68,68,0.16)
+      );
+      mix-blend-mode: overlay;
+      pointer-events: none;
+    }
+    /* Actual V2 CD white-ink print overlay */
+    .mini-cd-print {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 0 1.2px rgba(15, 23, 42, 0.85));
+      pointer-events: none;
+    }
+    /* Center spindle clamping ring & hole */
+    .mini-cd-hub {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 9999px;
+      background: rgba(241, 245, 249, 0.45);
+      border: 1.5px solid rgba(255, 255, 255, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .mini-cd-hole {
+      width: 9px;
+      height: 9px;
+      border-radius: 9999px;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+    /* Stationary specular glass reflection across the platter */
+    .mini-cd-gloss {
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 48%, rgba(255,255,255,0.08) 100%);
+      pointer-events: none;
+    }
+    #playerProgressSlider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 9999px;
+      background: #e2e8f0;
+      outline: none;
+      cursor: pointer;
+    }
+    #playerProgressSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 11px;
+      height: 11px;
+      border-radius: 9999px;
+      background: #0f172a;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+    #playerProgressSlider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+    .lyric-line-item {
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: all 0.22s ease;
+      cursor: pointer;
+      color: #64748b;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .lyric-line-item:hover {
+      background: rgba(15, 23, 42, 0.04);
+      color: #1e293b;
+    }
+    .lyric-line-item.active {
+      font-weight: 700;
+      font-size: 13px;
+      background: rgba(15, 23, 42, 0.05);
+      transform: translateX(2px);
+    }
+  </style>
+
+  <!-- Floating Top-Left Minimalist Album Music & Lyrics Player -->
+  <aside id="albumMusicPlayerModal" class="fixed top-13 left-3 sm:left-4 z-40 hidden w-[328px] sm:w-[352px] rounded-2xl p-3.5 select-none transition-all duration-200">
+    <!-- Top Section: Spinning V2 CD (Left) + Track Info & Controls (Right) -->
+    <div class="flex items-center gap-3.5">
+      <!-- Left: Spinning V2 Transparent CD -->
+      <div class="mini-cd-well cursor-pointer group" id="playerCdClickArea" title="點擊播放 / 暫停（與 3D 場景 CD 同步旋轉）">
+        <div class="mini-cd-rotor" id="playerMiniCdRotor">
+          <div class="mini-cd-clear-outer"></div>
+          <div class="mini-cd-silver-inner"></div>
+          <div class="mini-cd-iridescence"></div>
+          <img id="playerCdPrintOverlay" class="mini-cd-print" alt="hue V2 CD" />
+          <div class="mini-cd-hub">
+            <div class="mini-cd-hole"></div>
+          </div>
+        </div>
+        <div class="mini-cd-gloss"></div>
+      </div>
+
+      <!-- Right: Minimalist Track Meta + Scrubber + Transport -->
+      <div class="flex-1 min-w-0">
+        <!-- Header Row: Track Badge + Title + Close -->
+        <div class="flex items-start justify-between gap-1">
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span id="playerTrackBadge" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-white leading-none" style="background-color: #e40012;">01</span>
+              <span id="playerSheetTag" class="text-[10px] font-medium text-slate-400 font-mono">歌詞本 1 背</span>
+              <span id="playerAudioModeBadge" class="text-[9px] px-1 py-0.2 rounded bg-slate-100 text-slate-500 border border-slate-200/80">預覽</span>
+            </div>
+            <div class="mt-1 flex items-baseline gap-1.5 truncate">
+              <span id="playerTrackTitleZh" class="text-sm font-bold text-slate-900 truncate">給我</span>
+              <span id="playerTrackTitleEn" class="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wide truncate font-mono">MORE</span>
+            </div>
+          </div>
+          <button type="button" id="btnCloseMusicPlayer" class="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-black/5 transition text-sm leading-none shrink-0" title="收合播放器 (M)">×</button>
+        </div>
+
+        <!-- Scrubber Row -->
+        <div class="mt-2 space-y-1">
+          <input id="playerProgressSlider" type="range" min="0" max="1000" value="0" class="w-full block" />
+          <div class="flex justify-between text-[10px] font-mono text-slate-400 leading-none">
+            <span id="playerTimeCurrent">00:00</span>
+            <span id="playerTimeTotal">03:32</span>
+          </div>
+        </div>
+
+        <!-- Transport Buttons Row -->
+        <div class="mt-2 flex items-center justify-between">
+          <div class="flex items-center gap-1">
+            <button type="button" id="btnPlayerPrev" class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition" title="上一首">
+              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+            </button>
+            <button type="button" id="btnPlayerPlayPause" class="w-8 h-8 rounded-xl bg-slate-900 text-white hover:bg-slate-800 flex items-center justify-center shadow-sm transition" title="播放 / 暫停">
+              <svg id="iconPlayerPlay" class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <svg id="iconPlayerPause" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+            <button type="button" id="btnPlayerNext" class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition" title="下一首">
+              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            </button>
+          </div>
+
+          <!-- View Toggles: Tracklist / Lyrics / Load Audio -->
+          <div class="flex items-center gap-1">
+            <button type="button" id="btnPlayerToggleTracks" class="px-2 py-1 rounded-lg text-[10.5px] font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 transition" title="展開 01~09 曲目清單">
+              曲目
+            </button>
+            <button type="button" id="btnPlayerToggleLyrics" class="px-2 py-1 rounded-lg text-[10.5px] font-semibold bg-slate-900 text-white border border-slate-900 transition" title="顯示 / 隱藏完整歌詞">
+              歌詞
+            </button>
+            <button type="button" id="btnPlayerLoadAudio" class="w-6 h-6 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/70 transition" title="載入本機音檔 (MP3 / WAV)">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            </button>
+            <input id="inputPlayerAudioFiles" type="file" accept="audio/*" multiple class="hidden" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collapsible 01~09 Tracklist Drawer -->
+    <div id="playerTrackListDrawer" class="hidden mt-3 pt-2.5 border-t border-slate-200/70 max-h-44 overflow-y-auto space-y-1 pr-0.5"></div>
+
+    <!-- Collapsible Full Lyrics Viewport -->
+    <div id="playerLyricsPanel" class="mt-3 pt-2.5 border-t border-slate-200/70">
+      <div id="playerLyricsScroll" class="max-h-48 overflow-y-auto px-1 py-1 space-y-0.5 text-center scroll-smooth"></div>
+    </div>
+  </aside>
+
+  <script>
+    (function () {
+      const ALBUM_TRACKS = [{"num": "01", "zh": "給我", "en": "MORE", "pdf": "hue_01_給我_歌詞.pdf", "color": "#e40012", "colorName": "R 紅", "sheet": "歌詞本 1 背", "duration": 212, "audio": "audio/01.mp3", "lyrics": ["哎呀 是誰點的光", "喚醒 沈睡的我", "哭喊 大口飲著它", "小小的嘴巴 想吃個精光", "乖乖長大 長牙", "給我所有的滿意", "給我所有你的反應", "WOW WOW", "給我所有的肯定", "塞飽我存在的意義", "餵我 餵我", "看我 嘴裡的黑洞", "撕開 那流油的夢", "吸光 眼睛裡的光", "美味的景色裡 它一閃一閃", "準備咬牙 廝殺", "給我所有的鼓勵", "給我所有你的表情", "怎麼看 怎麼饞", "給我所有的華麗", "給我所有你的歡迎", "WOW WOW", "給我所有的窒息", "沾滿所有愛的定義", "餵我 愛我"]}, {"num": "02", "zh": "鳶尾花", "en": "IRIS", "pdf": "hue_02_鳶尾花_歌詞.pdf", "color": "#009744", "colorName": "G 綠", "sheet": "歌詞本 1 正", "duration": 248, "audio": "audio/02.mp3", "lyrics": ["越開越遠 那一座山還沒靠近一點", "越開越倦 剩一個人怎麼通往永遠", "走了 掏吧掏吧掏吧 把心掏開晾這", "妳愛的話", "夠了夠了夠了 再說就要生澀", "我鎖在一個美麗的花海 聽著", "妳說哭完以後不都一樣 活著", "鳶尾花 是妳用妳的眼神叫我 摘了吧", "讓從今以後活在神話", "忘了吧 是妳用一個轉身教我 忘了吧", "可我的呼吸脈搏全是妳的愛 唉", "越修越尖 美麗卻帶刺的枝葉盤旋 任我流血", "越填越陷 這坑裡的土壤種下誓言 等我食言", "走了 來吧來吧來吧 讓全部淋濕在視線", "我愛的花", "鑽吧 鑽吧 鑽吧 讓情緒在毛孔蔓延", "我鎖在一個沒妳的花海 守著", "噢我們之間妳留的形狀 還紅的", "鳶尾花 是妳用妳的眼神叫我 摘了吧", "讓從今以後活在神話", "忘了吧 是妳用一個轉身教我 忘了吧", "可我的呼吸脈搏全是妳的愛 唉", "鳶尾花 是妳用妳的眼神叫我 埋了吧", "編個自己不愛了的話", "沿著光 我拼命纏繞拼命擁抱 開著花", "我成了一座花園詮釋妳的愛 唉"]}, {"num": "03", "zh": "皇上吉祥", "en": "ALL HALE THE KING!", "pdf": "hue_03_皇上吉祥_歌詞.pdf", "color": "#1d1f86", "colorName": "B 藍", "sheet": "歌詞本 2 背", "duration": 218, "audio": "audio/03.mp3", "lyrics": ["誰不想要能活得理想", "誰不想要一覺到天亮", "誰不想要被跪著欣賞", "誰不想要吃撐得發慌", "誰不想要能恨的瀟灑", "可錢包要我低頭思量", "給我皇上吉祥", "我要你愛得抬頭仰望", "活在萬人之上", "這才是我們要的景仰", "這一片雲它飄的優雅", "這一隻貓牠睡得真香", "這一條魚游盡了海洋", "只有我還在挑著便當", "我想要的 怎麼都是你的", "全部都是你的 什麼都是你的", "我還在低頭吃便當", "給我皇上吉祥", "我要你愛得抬頭仰望", "活在萬人之上", "這才是我們要的景仰", "咦 咦 咦 這人生 不由我 由不得我", "咦 咦 咦 這錢包 不由我 由不得我", "咦 咦 咦 這腦袋 不由我 由不得我", "咦 咦 咦 這顆心 不由我 由不得我", "欸 欸 欸 人生由不得我身不由己", "來聲皇上吉祥", "神魔看了也得站兩旁", "活在萬人之上", "我的存在是你的信仰"]}, {"num": "04", "zh": "魚缸", "en": "GLASS PARADISE", "pdf": "hue_04_魚缸_歌詞.pdf", "color": "#e40012", "colorName": "R 紅", "sheet": "歌詞本 2 正", "duration": 236, "audio": "audio/04.mp3", "lyrics": ["啵 嘴裡吐著泡泡 外面世界熱鬧", "嘖 游不出這燈泡 陽光怎麼普照", "不出十寸的天堂 怎麼就這麼迷上 看你有多傻", "水流聲滴滴答答 時間在笑你 哈哈哈", "還在等著人欣賞 換口氣 溺著", "把撕碎的夢 輕輕的丟進 魚缸裡 喂著你 有多甜蜜", "透明的可以 自由的美麗 看得清 摸不起 有多上癮", "你愛的風景 是誰說了算", "你嚥的晚餐 是誰剩的愛", "水深不見底 養滿了秘密 說一句 我愛你 都快窒息", "唉 還在庸人自擾 腦袋沒人打掃", "噢 各個繽紛爭豔 冠軍不在裡面", "隔著玻璃的表揚 怎麼就這麼愛上 是不是缺氧", "你我他密密麻麻 期待別人說 哇哇哇", "自信滿滿的掙扎 怎麼會 膩呢", "把撕碎的夢 輕輕的丟進 魚缸裡 喂著你 有多甜蜜", "透明的可以 自由的美麗 看得清 摸不起 有多上癮", "你愛的風景 是誰說了算", "你嚥的晚餐 是誰扔的愛", "水深不見底 要你的命", "把撕碎的你 拼湊整齊", "把勸退的你 給抱緊", "把原罪的你 捧在手心", "把絕對的你 給自己", "讓永動的你 掀起風浪", "讓矯情的餌 下沉到底", "水面上的你 沒理由憋氣 在這裡 做自己 才能呼吸"]}, {"num": "05", "zh": "征服", "en": "I OWN YOU", "pdf": "hue_05_征服_歌詞.pdf", "color": "#009744", "colorName": "G 綠", "sheet": "歌詞本 3 背", "duration": 225, "audio": "audio/05.mp3", "lyrics": ["噢 征服的慾望在心裡作祟", "它要我把你踩在腳底下 看著你枯萎", "噢 解放的快感帶著我超越", "你越是掙扎想要爬起來 越往死裡推", "讓我一層一層把你撕開 露出你窩囊的姿態", "一遍一遍按在地上糟蹋掉眼淚 我才痛快", "你的心有多麼不堪懦弱 我的心就多麼瀟灑入魔", "一把火點著我", "燒開支配的入口 沒有盡頭 收不了手 才能算解脫", "你的心又在滾著找出口 我的心又在掐著你陪我", "成為我的煙火", "點亮娛樂的入口 不問結果 收不了手 死活全由我", "噢 情緒在呼吼著對我舉杯", "它要我把你捧在手掌心 再把你摔碎", "噢 再多一秒鐘我就要升天", "咀嚼著支離破碎的寶貝 要我怎麼拒絕", "看我隻手遮天掌握一切 全活不過我給得期限", "任我愚公移山造陸填海 順手拿你當消遣", "要像個孩子一樣聽話挨罵", "要像個畜生一樣任我鞭打", "要像個孩子一樣哭著叫媽", "要像個畜生一樣等我餵養", "要像個孩子一樣聽話挨罵", "要像個畜生一樣任我鞭打", "要你像孩子一樣不懂掙扎", "要你像畜生一樣不斷掙扎", "你的心有多麼不堪懦弱 我的心就多麼瀟灑入魔", "一把火點著我", "燒開支配的入口 沒有盡頭 收不了手 才能算解脫", "你的心又在滾著找出口 我的心又在掐著你陪我", "成為我的煙火", "點亮娛樂的入口 不問結果 收不了手 死活全由我"]}, {"num": "06", "zh": "重量", "en": "Carry On", "pdf": "hue_06_重量_歌詞.pdf", "color": "#1d1f86", "colorName": "B 藍", "sheet": "歌詞本 3 正", "duration": 264, "audio": "audio/06.mp3", "lyrics": ["我看過一道光 被點亮", "包圍著我 給了我模樣", "我看過一幅畫 在逞強", "試著裝下 所有的幻想", "至少還在路上 至少還在妄想", "至少捧著美麗去荒唐", "這是我的重量 這是我的迴響", "這是我在存在裡 遇見妳的辦法", "海一般的眼淚怎麼流乾", "沙一般的願望怎麼還", "追不完的浪花像妳一樣", "在 也不在", "在 也不在", "我做過一個夢 真的美", "不用承認現實的結尾", "我錯過一個妳 在故事的起點", "我會好好說完 用妳給的語言", "至少還在路上 至少還在想像", "至少揉著一半的形狀", "這是我不放下 這是我不作罷", "這是我還在前往沒有妳的遠方", "我是一陣風不停下就不會散", "呼出每口氣只為了把妳填滿", "走的每一步都不用刻意拐彎", "全向妳出發 向妳出發", "快跟我說妳要什麼", "快跟我說還欠什麼", "我拖著殼 在揮手呢", "快跟我說妳在等著", "快跟我說妳不捨得", "讓我不用去猜", "我是一陣風不停下就不會散", "呼出每口氣只為了把妳填滿", "走的每一步都不用刻意拐彎", "我看著妳的光 被點亮", "包圍著我 給了我模樣", "妳看著我的畫 沒了匡", "多閃亮 有多閃亮"]}, {"num": "07", "zh": "狗英雄", "en": "Sons Of Tomorrow", "pdf": "hue_07_狗英雄_歌詞.pdf", "color": "#e40012", "colorName": "R 紅", "sheet": "歌詞本 4 背", "duration": 205, "audio": "audio/07.mp3", "lyrics": ["啃著一根沒肉的骨頭 又在對誰搖尾巴", "帶個項圈就讓你喊媽 告訴你這是種偉大", "怎麼努力怎麼哭窮 一聲指令就坐下", "是不是多入戲 就多成功", "嘿 朋友握個手 我們沒什麼不同", "嘿 朋友甩個頭 抖抖一身的落魄", "Oh Oh Hold 一 Hold 面對罐頭別衝動", "就讓我們反咬一口 動口別動手", "每個人事物都叫好叫滿 才會有人摸", "每個路口全都撒好撒滿 才盡忠職守", "萬事俱備怎麼還沒放風 飯被誰叼走", "是不是多清高 就多落魄", "嘿 朋友握個手 我們沒什麼不同", "嘿 朋友甩個頭 抖抖一身的落魄", "Oh Oh Hold 一 Hold 面對人生別衝動", "就讓我們反咬一口 動口別動手", "嘿 朋友咬一口 別再讓人牽著走", "嘿 朋友咬一口 我們別爭寵示弱", "Hey Yo 吼一吼 面對人生的狗窩", "就讓我們反咬一口 當條狗英雄"]}, {"num": "08", "zh": "裝死", "en": "Till We Make It", "pdf": "hue_08_裝死_歌詞.pdf", "color": "#009744", "colorName": "G 綠", "sheet": "歌詞本 4 正", "duration": 232, "audio": "audio/08.mp3", "lyrics": ["隊伍盡頭 他們笑著等我", "那裡沒有出口", "只有更多入口", "全在跟我招手", "肩並著肩 扛著某種信念", "日子不再新鮮", "成長是種奉獻", "我學習不再睜眼找線索", "看不見 看不見 就不怕被騙", "變不見 變不見 就不用發現", "再一遍 再一遍 噢我還在練", "以為被踩了要叫 原來是我沒禮貌", "看不見 看不見 就不會心碎", "變不見 變不見 就不用再追", "再一遍 再一遍 教我怎麼練", "噢 不要說不要 還要再多多指教", "我想自首 定義讓人執著", "成功是種襯托", "拒絕是在示弱", "我們都是說謊的英雄", "歲月盡頭 拿著號碼牌走", "獎狀被我領在手", "所有人都在拍手", "我像一頭牛被自己吹走", "我待過的夢是不是還在等我", "它給的地圖在手", "說跟著路走", "怎麼就羊入了虎口", "看不見 看不見 就不會被騙", "變不見 變不見 就不用發現", "再一遍 再一遍 噢我還在練", "以為被踩了要叫 原來是我沒禮貌", "看不見 看不見 就不會心碎", "變不見 變不見 就不用再追", "再一遍 再一遍 教我怎麼練", "噢 不要說不要 還要再多多指教", "看不見 看不見 看不見看不見", "變不見 變不見 變不見變不見", "再一遍 再一遍 再一遍再一遍", "當一個裝死的鬼 當一個裝死的鬼"]}, {"num": "09", "zh": "啃", "en": "ME IN YOU", "pdf": "hue_09_啃_歌詞.pdf", "color": "#1d1f86", "colorName": "B 藍", "sheet": "歌詞本 5 背", "duration": 240, "audio": "audio/09.mp3", "lyrics": ["明明說好不再習慣", "偏偏本能還是為你氾濫", "明明說好別再擴散", "偏偏心底還是蔓延開來", "來 狠狠扎進肉裡 牢牢佔據神經", "不用客氣 我就是你的唯一", "來 慢慢入侵到底 好好滲透徹底", "死死咬緊 就是給我的鼓勵", "啃著我 一口一口把我消化成新的世界 活在你裡面", "噢 一寸一寸讓我成為你新的舌尖 被你掛在嘴邊", "緊緊把我含在嘴裡", "輕輕用我說著甜言蜜語", "深深竄進我的腦裡", "悄悄對我說你來的目的", "熟悉的慢動作 像進食的節奏", "緩緩的吞沒 是愛我的摸索", "看上的全拿走 你要的不囉唆", "能被你主宰 是我的存在", "啃著我 一口一口把我消化成新的世界 活在你裡面", "噢 一寸一寸讓我成為你新的舌尖 被你掛在嘴邊", "來 狠狠扎進肉裡 牢牢佔據神經", "不用客氣 給我痕跡", "來 慢慢入侵到底 好好滲透徹底", "死死咬緊 給我指令", "來 狠狠扎進肉裡 牢牢佔據神經", "不用客氣 給我反應", "來 慢慢入侵到底 好好滲透徹底", "死死咬緊 給我鼓勵"]}];
+
+      const modal = document.getElementById('albumMusicPlayerModal');
+      const btnToggleHeader = document.getElementById('btnToggleMusicPlayer');
+      const btnClose = document.getElementById('btnCloseMusicPlayer');
+      const dotPlaying = document.getElementById('dotMusicPlaying');
+      const cdRotor = document.getElementById('playerMiniCdRotor');
+      const cdPrintOverlay = document.getElementById('playerCdPrintOverlay');
+      const cdClickArea = document.getElementById('playerCdClickArea');
+
+      const badgeEl = document.getElementById('playerTrackBadge');
+      const sheetTagEl = document.getElementById('playerSheetTag');
+      const audioModeBadgeEl = document.getElementById('playerAudioModeBadge');
+      const titleZhEl = document.getElementById('playerTrackTitleZh');
+      const titleEnEl = document.getElementById('playerTrackTitleEn');
+      const sliderEl = document.getElementById('playerProgressSlider');
+      const timeCurEl = document.getElementById('playerTimeCurrent');
+      const timeTotEl = document.getElementById('playerTimeTotal');
+
+      const btnPrev = document.getElementById('btnPlayerPrev');
+      const btnPlayPause = document.getElementById('btnPlayerPlayPause');
+      const iconPlay = document.getElementById('iconPlayerPlay');
+      const iconPause = document.getElementById('iconPlayerPause');
+      const btnNext = document.getElementById('btnPlayerNext');
+      const btnToggleTracks = document.getElementById('btnPlayerToggleTracks');
+      const btnToggleLyrics = document.getElementById('btnPlayerToggleLyrics');
+      const btnLoadAudio = document.getElementById('btnPlayerLoadAudio');
+      const inputAudioFiles = document.getElementById('inputPlayerAudioFiles');
+
+      const trackListDrawer = document.getElementById('playerTrackListDrawer');
+      const lyricsPanel = document.getElementById('playerLyricsPanel');
+      const lyricsScroll = document.getElementById('playerLyricsScroll');
+
+      // Copy V2 CD white-ink print image source from #cdPrintImg
+      const srcCdImg = document.getElementById('cdPrintImg');
+      if (srcCdImg && cdPrintOverlay) {
+        cdPrintOverlay.src = srcCdImg.src;
+      }
+
+      let currentTrackIdx = 0;
+      let isPlaying = false;
+      let currentTimeSec = 0;
+      let durationSec = ALBUM_TRACKS[0].duration;
+      let usingRealAudio = false;
+      let miniCdAngleDeg = 0;
+      let miniCdVelDeg = 0;
+      let lastTickMs = performance.now();
+      let activeLyricIdx = -1;
+
+      const audioEl = new Audio();
+      audioEl.preload = 'metadata';
+      const customAudioUrls = {};
+
+      function formatTime(sec) {
+        const s = Math.max(0, Math.floor(sec || 0));
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return (m < 10 ? '0' + m : '' + m) + ':' + (r < 10 ? '0' + r : '' + r);
+      }
+
+      function renderTrackList() {
+        if (!trackListDrawer) return;
+        trackListDrawer.innerHTML = '';
+        ALBUM_TRACKS.forEach(function (t, idx) {
+          const active = (idx === currentTrackIdx);
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'w-full px-2.5 py-1.5 rounded-xl flex items-center justify-between text-left transition ' +
+            (active ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-700');
+          row.innerHTML =
+            '<div class="flex items-center gap-2 min-w-0">' +
+              '<span class="w-4 h-4 rounded text-[9.5px] font-mono font-bold text-white flex items-center justify-center shrink-0" style="background-color:' + t.color + ';">' + t.num + '</span>' +
+              '<span class="text-xs truncate">' + t.zh + '</span>' +
+              '<span class="text-[10px] font-mono uppercase opacity-60 truncate">' + t.en + '</span>' +
+            '</div>' +
+            '<span class="text-[9.5px] font-mono opacity-60 shrink-0 ml-2">' + t.sheet + '</span>';
+          row.addEventListener('click', function () {
+            loadTrack(idx, true);
+          });
+          trackListDrawer.appendChild(row);
+        });
+      }
+
+      function renderLyrics() {
+        if (!lyricsScroll) return;
+        const track = ALBUM_TRACKS[currentTrackIdx];
+        lyricsScroll.innerHTML = '';
+        activeLyricIdx = -1;
+        track.lyrics.forEach(function (line, lIdx) {
+          const div = document.createElement('div');
+          div.className = 'lyric-line-item';
+          div.textContent = line;
+          div.addEventListener('click', function () {
+            const ratio = (lIdx + 0.2) / Math.max(1, track.lyrics.length);
+            seekToRatio(ratio);
+            if (!isPlaying) setPlayingState(true);
+          });
+          lyricsScroll.appendChild(div);
+        });
+      }
+
+      function updateActiveLyricHighlight() {
+        const track = ALBUM_TRACKS[currentTrackIdx];
+        if (!track || !track.lyrics.length || !lyricsScroll) return;
+        const progress = Math.min(0.999, Math.max(0, currentTimeSec / Math.max(1, durationSec)));
+        const idx = Math.min(track.lyrics.length - 1, Math.floor(progress * track.lyrics.length));
+        if (idx === activeLyricIdx) return;
+        activeLyricIdx = idx;
+
+        const children = lyricsScroll.children;
+        for (let i = 0; i < children.length; i++) {
+          const el = children[i];
+          if (i === idx) {
+            el.classList.add('active');
+            el.style.color = track.color;
+            const targetTop = el.offsetTop - lyricsScroll.clientHeight / 2 + el.clientHeight / 2;
+            lyricsScroll.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+          } else {
+            el.classList.remove('active');
+            el.style.color = '';
+          }
+        }
+      }
+
+      function loadTrack(idx, autoPlay) {
+        currentTrackIdx = (idx + ALBUM_TRACKS.length) % ALBUM_TRACKS.length;
+        const track = ALBUM_TRACKS[currentTrackIdx];
+        currentTimeSec = 0;
+        durationSec = track.duration;
+        usingRealAudio = false;
+
+        if (badgeEl) {
+          badgeEl.textContent = track.num;
+          badgeEl.style.backgroundColor = track.color;
+        }
+        if (sheetTagEl) sheetTagEl.textContent = track.sheet;
+        if (titleZhEl) titleZhEl.textContent = track.zh;
+        if (titleEnEl) titleEnEl.textContent = track.en;
+        if (timeCurEl) timeCurEl.textContent = '00:00';
+        if (timeTotEl) timeTotEl.textContent = formatTime(durationSec);
+        if (sliderEl) sliderEl.value = 0;
+
+        renderTrackList();
+        renderLyrics();
+        updateActiveLyricHighlight();
+
+        // Try loading custom uploaded file or audio/0X.mp3
+        const candidateSrc = customAudioUrls[currentTrackIdx] || track.audio;
+        if (candidateSrc) {
+          audioEl.src = candidateSrc;
+          audioEl.load();
+        }
+
+        if (autoPlay) {
+          setPlayingState(true);
+        } else {
+          updatePlayIcons();
+        }
+      }
+
+      audioEl.addEventListener('loadedmetadata', function () {
+        if (audioEl.duration && isFinite(audioEl.duration) && audioEl.duration > 1) {
+          usingRealAudio = true;
+          durationSec = audioEl.duration;
+          if (timeTotEl) timeTotEl.textContent = formatTime(durationSec);
+          if (audioModeBadgeEl) {
+            audioModeBadgeEl.textContent = '音軌';
+            audioModeBadgeEl.className = 'text-[9px] px-1 py-0.2 rounded bg-emerald-50 text-emerald-600 border border-emerald-200';
+          }
+          if (isPlaying) {
+            audioEl.play().catch(function () { usingRealAudio = false; });
+          }
+        }
+      });
+
+      audioEl.addEventListener('error', function () {
+        usingRealAudio = false;
+        if (audioModeBadgeEl) {
+          audioModeBadgeEl.textContent = '預覽';
+          audioModeBadgeEl.className = 'text-[9px] px-1 py-0.2 rounded bg-slate-100 text-slate-500 border border-slate-200/80';
+        }
+      });
+
+      audioEl.addEventListener('ended', function () {
+        loadTrack(currentTrackIdx + 1, true);
+      });
+
+      function updatePlayIcons() {
+        if (iconPlay) iconPlay.classList.toggle('hidden', isPlaying);
+        if (iconPause) iconPause.classList.toggle('hidden', !isPlaying);
+        if (dotPlaying) dotPlaying.classList.toggle('hidden', !isPlaying);
+      }
+
+      function setPlayingState(play) {
+        isPlaying = !!play;
+        updatePlayIcons();
+        if (usingRealAudio) {
+          if (isPlaying) {
+            audioEl.play().catch(function () { usingRealAudio = false; });
+          } else {
+            audioEl.pause();
+          }
+        }
+      }
+
+      function seekToRatio(ratio) {
+        const clamped = Math.max(0, Math.min(1, ratio));
+        currentTimeSec = clamped * durationSec;
+        if (usingRealAudio && audioEl.duration) {
+          audioEl.currentTime = currentTimeSec;
+        }
+        if (sliderEl) sliderEl.value = Math.round(clamped * 1000);
+        if (timeCurEl) timeCurEl.textContent = formatTime(currentTimeSec);
+        updateActiveLyricHighlight();
+      }
+
+      // Animation loop for spinning mini CD + 3D CD sync + demo timer
+      function tickMusicPlayer(now) {
+        requestAnimationFrame(tickMusicPlayer);
+        const dt = Math.min(0.1, Math.max(0.001, (now - lastTickMs) / 1000));
+        lastTickMs = now;
+
+        if (isPlaying) {
+          if (usingRealAudio && !audioEl.paused) {
+            currentTimeSec = audioEl.currentTime;
+          } else {
+            currentTimeSec += dt;
+            if (currentTimeSec >= durationSec) {
+              loadTrack(currentTrackIdx + 1, true);
+              return;
+            }
+          }
+          if (sliderEl) sliderEl.value = Math.round((currentTimeSec / Math.max(1, durationSec)) * 1000);
+          if (timeCurEl) timeCurEl.textContent = formatTime(currentTimeSec);
+          updateActiveLyricHighlight();
+
+          miniCdVelDeg += (78 - miniCdVelDeg) * 0.12;
+        } else {
+          miniCdVelDeg *= 0.94;
+          if (Math.abs(miniCdVelDeg) < 0.05) miniCdVelDeg = 0;
+        }
+
+        if (miniCdVelDeg !== 0) {
+          miniCdAngleDeg = (miniCdAngleDeg + miniCdVelDeg * dt) % 360;
+          if (cdRotor) {
+            cdRotor.style.transform = 'rotate(' + miniCdAngleDeg.toFixed(2) + 'deg)';
+          }
+          // Also gently spin the 3D CD in the 3D scene!
+          if (window.set3dCdSpinVelocity && isPlaying) {
+            window.set3dCdSpinVelocity(0.016);
+          }
+        }
+      }
+
+      // Event Listeners
+      function togglePlayerModal() {
+        if (!modal) return;
+        const isHidden = modal.classList.contains('hidden');
+        modal.classList.toggle('hidden', !isHidden);
+        if (btnToggleHeader) {
+          btnToggleHeader.classList.toggle('ring-2', isHidden);
+          btnToggleHeader.classList.toggle('ring-slate-900/20', isHidden);
+        }
+      }
+
+      if (btnToggleHeader) {
+        btnToggleHeader.addEventListener('click', function (e) {
+          e.stopPropagation();
+          togglePlayerModal();
+        });
+      }
+      if (btnClose) {
+        btnClose.addEventListener('click', function (e) {
+          e.stopPropagation();
+          modal.classList.add('hidden');
+        });
+      }
+      if (btnPlayPause) {
+        btnPlayPause.addEventListener('click', function () {
+          setPlayingState(!isPlaying);
+        });
+      }
+      if (cdClickArea) {
+        cdClickArea.addEventListener('click', function () {
+          setPlayingState(!isPlaying);
+        });
+      }
+      if (btnPrev) {
+        btnPrev.addEventListener('click', function () {
+          loadTrack(currentTrackIdx - 1, isPlaying);
+        });
+      }
+      if (btnNext) {
+        btnNext.addEventListener('click', function () {
+          loadTrack(currentTrackIdx + 1, isPlaying);
+        });
+      }
+      if (sliderEl) {
+        sliderEl.addEventListener('input', function (e) {
+          const ratio = parseFloat(e.target.value) / 1000;
+          seekToRatio(ratio);
+        });
+      }
+      if (btnToggleTracks && trackListDrawer) {
+        btnToggleTracks.addEventListener('click', function () {
+          const willShow = trackListDrawer.classList.contains('hidden');
+          trackListDrawer.classList.toggle('hidden', !willShow);
+          btnToggleTracks.className = willShow
+            ? 'px-2 py-1 rounded-lg text-[10.5px] font-semibold bg-slate-900 text-white border border-slate-900 transition'
+            : 'px-2 py-1 rounded-lg text-[10.5px] font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 transition';
+        });
+      }
+      if (btnToggleLyrics && lyricsPanel) {
+        btnToggleLyrics.addEventListener('click', function () {
+          const willShow = lyricsPanel.classList.contains('hidden');
+          lyricsPanel.classList.toggle('hidden', !willShow);
+          btnToggleLyrics.className = willShow
+            ? 'px-2 py-1 rounded-lg text-[10.5px] font-semibold bg-slate-900 text-white border border-slate-900 transition'
+            : 'px-2 py-1 rounded-lg text-[10.5px] font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 transition';
+        });
+      }
+      if (btnLoadAudio && inputAudioFiles) {
+        btnLoadAudio.addEventListener('click', function () {
+          inputAudioFiles.click();
+        });
+        inputAudioFiles.addEventListener('change', function (e) {
+          const files = Array.from(e.target.files || []);
+          if (!files.length) return;
+          files.forEach(function (file) {
+            const url = URL.createObjectURL(file);
+            // Match by track number 01..09 or song title, or assign to current track
+            let matchedIdx = -1;
+            ALBUM_TRACKS.forEach(function (t, i) {
+              if (file.name.includes(t.num) || file.name.includes(t.zh) || file.name.toLowerCase().includes(t.en.toLowerCase())) {
+                matchedIdx = i;
+              }
+            });
+            if (matchedIdx === -1 && files.length === 1) matchedIdx = currentTrackIdx;
+            if (matchedIdx !== -1) customAudioUrls[matchedIdx] = url;
+          });
+          loadTrack(currentTrackIdx, true);
+        });
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+        if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          togglePlayerModal();
+        }
+      });
+
+      loadTrack(0, false);
+      requestAnimationFrame(tickMusicPlayer);
+    })();
+  </script>
 
 </body>
 

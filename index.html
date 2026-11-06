@@ -23375,6 +23375,7 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
 
         petOrientation: 'horizontal', // 'horizontal' (natural orientation with right spine + white print) or 'vertical'
         contentOrientation: 'horizontal', // 'horizontal' (橫式，預設如示意圖) or 'vertical' (直式，歌詞正向閱讀)
+        contentOrientProgress: 0.0,
 
 
 
@@ -23976,12 +23977,14 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
         );
         cdTrayGroup.rotation.set(0, cdFacingBackRotY, 0);
 
-        // Orientation of Lyric Sheets & CD:
+        // Orientation of Lyric Sheets & CD (smoothly interpolated via state.contentOrientProgress: 0.0 = 橫式, 1.0 = 直式):
         // 'horizontal' (橫式，預設，如示意圖): CD = 0° (hue在上、RGB在下), Lyric Sheets = +90° CCW (+Math.PI / 2, 歌詞橫放、1~9歌名對齊CD上下弧)
         // 'vertical'   (直式，正向閱讀歌詞): CD = -90° CW (-Math.PI / 2, hue在右、RGB在左), Lyric Sheets = 0° (歌詞垂直正向直立、1~9歌名對齊CD左右弧)
-        const isContentVertical = (state.contentOrientation === 'vertical');
-        const cdOrientRotZ = isContentVertical ? (-Math.PI / 2) : 0;
-        const lyricOrientRotZ = isContentVertical ? 0 : (Math.PI / 2);
+        const orientProg = (typeof state.contentOrientProgress === 'number')
+          ? state.contentOrientProgress
+          : ((state.contentOrientation === 'vertical') ? 1.0 : 0.0);
+        const cdOrientRotZ = THREE.MathUtils.lerp(0, -Math.PI / 2, orientProg);
+        const lyricOrientRotZ = THREE.MathUtils.lerp(Math.PI / 2, 0, orientProg);
 
         cdDiscGroup.position.set(
           THREE.MathUtils.lerp(-155 * explodeHRatio, 150, K),
@@ -24757,7 +24760,7 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
           cdSpinAngle += dAngle;
           cdAngularVelocity = dAngle * 0.85;
           prevCDPointerAngle = curAngle;
-          if (cdDiscGroup) cdDiscGroup.rotation.z = ((state.contentOrientation === 'vertical') ? (-Math.PI / 2) : 0) + cdSpinAngle;
+          if (cdDiscGroup) cdDiscGroup.rotation.z = (-Math.PI / 2) * (state.contentOrientProgress || 0) + cdSpinAngle;
           return;
         }
 
@@ -38859,8 +38862,20 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
           cdAngularVelocity *= 0.984; // low-friction spindle bearing damping
           if (Math.abs(cdAngularVelocity) < 0.00004) cdAngularVelocity = 0;
         }
+        const targetOrientProg = (state.contentOrientation === 'vertical') ? 1.0 : 0.0;
+        if (typeof state.contentOrientProgress !== 'number') state.contentOrientProgress = targetOrientProg;
+        const orientDiff = targetOrientProg - state.contentOrientProgress;
+        if (Math.abs(orientDiff) > 0.0005) {
+          state.contentOrientProgress += orientDiff * 0.14;
+          cdSpinAngle *= 0.82;
+          updateKinematics();
+        } else if (state.contentOrientProgress !== targetOrientProg) {
+          state.contentOrientProgress = targetOrientProg;
+          cdSpinAngle = 0;
+          updateKinematics();
+        }
         if (cdDiscGroup) {
-          cdDiscGroup.rotation.z = ((state.contentOrientation === 'vertical') ? (-Math.PI / 2) : 0) + cdSpinAngle;
+          cdDiscGroup.rotation.z = (-Math.PI / 2) * (state.contentOrientProgress || 0) + cdSpinAngle;
           if (camera && renderer) {
             _cardWorldPos.set(0, 0, 0);
             cdDiscGroup.getWorldPosition(_cardWorldPos);
@@ -42504,11 +42519,15 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
         }
       };
 
-      window.setContentOrientation = function (mode) {
+      window.setContentOrientation = function (mode, instant) {
         state.contentOrientation = (mode === 'vertical') ? 'vertical' : 'horizontal';
-        cdSpinAngle = 0;
         cdAngularVelocity = 0;
-        updateKinematics();
+        cdSpinAngle = Math.atan2(Math.sin(cdSpinAngle), Math.cos(cdSpinAngle));
+        if (instant) {
+          state.contentOrientProgress = (state.contentOrientation === 'vertical') ? 1.0 : 0.0;
+          cdSpinAngle = 0;
+          updateKinematics();
+        }
         window.updateContentOrientUI();
       };
 

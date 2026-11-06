@@ -2549,15 +2549,10 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-      <div id="lenticularAngleIndicator" class="absolute bottom-3 sm:bottom-4 right-2 sm:right-3 z-20 glass-panel rounded-2xl p-2.5 shadow-xl border border-white/70 text-xs w-36 sm:w-40 backdrop-blur-xl transition-all select-none cursor-pointer" title="點擊切換視角連動 / 手動鎖定">
-        <!-- Minimal Top Controls: Close Button Only -->
-        <div class="flex items-center justify-end mb-0.5 px-0.5">
-          <button type="button" id="btnCloseLentHud" class="w-4 h-4 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-black/5 transition text-xs leading-none" title="關閉 HUD">×</button>
-        </div>
-
+      <div id="lenticularAngleIndicator" class="absolute bottom-3 sm:bottom-4 right-2 sm:right-3 z-20 glass-panel rounded-xl px-2.5 pt-2 pb-1.5 shadow-xl border border-white/70 text-xs w-auto backdrop-blur-xl transition-all select-none cursor-pointer flex flex-col items-center" title="點擊切換視角連動 / 手動鎖定">
         <!-- Gauge Arc Visualizer -->
         <div id="lentHudGaugeArea" class="relative flex flex-col items-center justify-center">
-          <svg viewBox="0 0 100 55" class="w-full h-11 sm:h-12 overflow-visible">
+          <svg viewBox="6 1 88 55" class="w-[88px] h-[52px] overflow-visible">
             <!-- Arc Track (Phase 1 Red/Blue, Phase 2 Blue/Green, Phase 3 Green/Red) -->
             <path d="M 12 48 A 38 38 0 0 1 35 15" fill="none" stroke="#ef4444" stroke-width="4.5" stroke-linecap="round" opacity="0.85"/>
             <path d="M 38 13 A 38 38 0 0 1 62 13" fill="none" stroke="#3b82f6" stroke-width="4.5" opacity="0.85"/>
@@ -2577,7 +2572,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
         </div>
 
         <!-- Integrated Crisp Readout (No nested box) -->
-        <div id="lenticularAngleLabel" class="font-bold text-[10.5px] sm:text-[11px] text-slate-800 font-mono tracking-tight text-center mt-1 truncate">0.0° ・ 藍/綠</div>
+        <div id="lenticularAngleLabel" class="font-bold text-[10.5px] leading-tight text-slate-800 font-mono tracking-tight text-center mt-0.5 whitespace-nowrap">0.0° ・ 藍/綠</div>
       </div>
 
       <!-- Quick Toggles moved to Header -->

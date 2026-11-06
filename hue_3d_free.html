@@ -2557,13 +2557,6 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
             <span class="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider font-mono">Lenticular</span>
           </div>
           <div class="flex items-center gap-1">
-            <button type="button" id="btnToggleGyroHud" class="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-black/5 transition" title="手機手持體感傾斜 (Gyroscope)">
-              <svg class="w-3.5 h-3.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="6" y="3" width="12" height="18" rx="2"/>
-                <line x1="10" y1="18" x2="14" y2="18"/>
-                <path d="M2 12h2M20 12h2"/>
-              </svg>
-            </button>
             <button type="button" id="btnCloseLentHud" class="w-4 h-4 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-black/5 transition text-xs leading-none" title="關閉 HUD">×</button>
           </div>
         </div>
@@ -5508,21 +5501,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
 
-            <!-- Gyroscope Tilt Integration -->
-            <div class="pt-2 border-t border-slate-800">
-              <button type="button" id="btnToggleGyro" class="w-full py-1.5 px-3 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center justify-between transition">
-                <div class="flex items-center gap-2">
-                  <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="6" y="3" width="12" height="18" rx="2"/>
-                    <line x1="10" y1="18" x2="14" y2="18"/>
-                    <path d="M2 12h2M20 12h2"/>
-                  </svg>
-                  <span>手機手持體感傾斜</span>
-                </div>
-                <span id="txtToggleGyro" class="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-400">關閉</span>
-              </button>
-              <div class="text-[9.5px] text-slate-400 mt-1 px-1">支援手機與平板陀螺儀，手持前後/左右傾斜即時變換光柵圖面</div>
-            </div>
+
 
             <!-- Axis & Presentation Settings -->
 
@@ -33725,8 +33704,9 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
 
 
 
-      // Gyroscope / DeviceOrientation Feature for Mobile & Tablet Lenticular Tilt
+      // Gyroscope / DeviceOrientation Feature for Mobile & Tablet Lenticular Tilt (Default ON on Mobile)
       let isGyroActive = false;
+      let hasGyroReading = false;
       let neutralTilt = null; // Calibrated zero point
       let rawTiltTarget = 0.5;
       let currentGyroPhase = 0.5;
@@ -33738,9 +33718,19 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
 
       function handleDeviceOrientation(e) {
         if (!isGyroActive) return;
+        if ((e.beta === null || e.beta === undefined) && (e.gamma === null || e.gamma === undefined)) return;
+
+        if (!hasGyroReading) {
+          hasGyroReading = true;
+          state.lenticularAuto = false;
+          updateGyroUI();
+        }
 
         let rawAngle = 0;
-        const isLandscape = Math.abs(window.orientation || 0) === 90;
+        const screenAngle = (window.screen && window.screen.orientation && typeof window.screen.orientation.angle === 'number')
+          ? window.screen.orientation.angle
+          : (window.orientation || 0);
+        const isLandscape = Math.abs(screenAngle) === 90 || Math.abs(screenAngle) === 270;
 
         if (state.lenticularAxis === 'vertical') {
           // Vertical lenticular: pitch / beta
@@ -33748,7 +33738,7 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
         } else {
           // Horizontal lenticular: roll / gamma (or beta in landscape)
           if (isLandscape) {
-            rawAngle = (window.orientation === 90) ? -e.beta : e.beta;
+            rawAngle = (screenAngle === 90) ? -e.beta : e.beta;
           } else {
             rawAngle = (e.gamma !== null && e.gamma !== undefined) ? e.gamma : 0;
           }
@@ -33767,51 +33757,18 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
       }
 
       function updateGyroUI() {
-        if (btnToggleGyro) {
-          btnToggleGyro.classList.toggle('border-emerald-500/80', isGyroActive);
-          btnToggleGyro.classList.toggle('bg-emerald-500/20', isGyroActive);
-          btnToggleGyro.classList.toggle('text-emerald-300', isGyroActive);
-        }
-        if (txtToggleGyro) {
-          txtToggleGyro.textContent = isGyroActive ? '體感開啟中' : '關閉';
-          txtToggleGyro.className = 'text-[10px] px-2 py-0.5 rounded border ' +
-            (isGyroActive ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400' : 'bg-slate-900 text-slate-400 border-slate-700');
-        }
-        const btnMobileGyroFab = document.getElementById('btnMobileGyroFab');
-        const iconMobileGyro = document.getElementById('iconMobileGyro');
-        if (btnMobileGyroFab) {
-          btnMobileGyroFab.classList.toggle('border-emerald-400', isGyroActive);
-          btnMobileGyroFab.classList.toggle('bg-emerald-500/20', isGyroActive);
-          btnMobileGyroFab.classList.toggle('text-emerald-400', isGyroActive);
-          btnMobileGyroFab.classList.toggle('shadow-emerald-500/30', isGyroActive);
-          btnMobileGyroFab.classList.toggle('ring-2', isGyroActive);
-          btnMobileGyroFab.classList.toggle('ring-emerald-400/60', isGyroActive);
-          if (iconMobileGyro) {
-            iconMobileGyro.classList.toggle('text-emerald-400', isGyroActive);
-            iconMobileGyro.classList.toggle('text-slate-700', !isGyroActive);
-          }
-          btnMobileGyroFab.title = isGyroActive ? '體感傾斜運行中（點擊關閉）' : '開啟手機手持體感 (Gyroscope)';
-        }
-
-        if (btnToggleGyroHud) {
-          btnToggleGyroHud.classList.toggle('text-emerald-400', isGyroActive);
-          btnToggleGyroHud.classList.toggle('bg-emerald-500/20', isGyroActive);
-          btnToggleGyroHud.classList.toggle('ring-1', isGyroActive);
-          btnToggleGyroHud.classList.toggle('ring-emerald-400/50', isGyroActive);
-          btnToggleGyroHud.classList.toggle('text-slate-400', !isGyroActive);
-          btnToggleGyroHud.title = isGyroActive ? '體感傾斜運行中（點擊關閉，點擊面板中心可重校準零點）' : '開啟手機手持體感傾斜 (Gyroscope)';
-        }
+        const active = isGyroActive && hasGyroReading;
         if (lentHudStatusDot) {
           lentHudStatusDot.className = 'w-1.5 h-1.5 rounded-full ' +
-            (isGyroActive ? 'bg-emerald-400 animate-ping' : 'bg-amber-400 animate-pulse');
+            (active ? 'bg-emerald-400 animate-ping' : 'bg-amber-400 animate-pulse');
         }
       }
 
       function startGyroTracking() {
+        if (isGyroActive) return;
         neutralTilt = null;
         rawTiltTarget = state.lenticularManualPhase || 0.5;
         currentGyroPhase = rawTiltTarget;
-        state.lenticularAuto = false;
         window.addEventListener('deviceorientation', handleDeviceOrientation, true);
         isGyroActive = true;
         updateGyroUI();
@@ -33820,13 +33777,14 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
       function stopGyroTracking() {
         window.removeEventListener('deviceorientation', handleDeviceOrientation, true);
         isGyroActive = false;
+        hasGyroReading = false;
         neutralTilt = null;
         updateGyroUI();
       }
 
       function toggleGyro() {
         if (typeof isTourActive !== 'undefined' && isTourActive && typeof stopTour === 'function') stopTour();
-        if (isGyroActive) {
+        if (isGyroActive && hasGyroReading) {
           stopGyroTracking();
           return;
         }
@@ -33837,52 +33795,42 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
             .then(function (permissionState) {
               if (permissionState === 'granted') {
                 startGyroTracking();
-              } else {
-                alert('陀螺儀存取權限已被拒絕。若欲使用體感功能，請至系統「設定」>「Safari」允許動作與方向存取。');
               }
             })
-            .catch(function (err) {
-              console.warn('DeviceOrientation error:', err);
+            .catch(function () {
               startGyroTracking();
             });
         } else if (window.DeviceOrientationEvent) {
           startGyroTracking();
-        } else {
-          alert('您的裝置或瀏覽器不支援陀螺儀感應器。');
         }
       }
 
-      if (btnToggleGyro) {
-        btnToggleGyro.addEventListener('click', toggleGyro);
+      // Automatically enable gyroscope by default on mobile & tablet devices
+      const isMobileOrTabletDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '') ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+        (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+
+      if (isMobileOrTabletDevice) {
+        if (window.DeviceOrientationEvent) {
+          startGyroTracking();
+        }
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const requestIosGyroOnFirstGesture = function () {
+            DeviceOrientationEvent.requestPermission()
+              .then(function (permissionState) {
+                if (permissionState === 'granted') {
+                  isGyroActive = false;
+                  startGyroTracking();
+                }
+              })
+              .catch(function () {});
+            window.removeEventListener('touchend', requestIosGyroOnFirstGesture, true);
+            window.removeEventListener('click', requestIosGyroOnFirstGesture, true);
+          };
+          window.addEventListener('touchend', requestIosGyroOnFirstGesture, { capture: true, passive: true });
+          window.addEventListener('click', requestIosGyroOnFirstGesture, { capture: true, passive: true });
+        }
       }
-      const btnMobileGyroFab = document.getElementById('btnMobileGyroFab');
-      if (btnMobileGyroFab) {
-        btnMobileGyroFab.addEventListener('click', function (e) {
-          e.stopPropagation();
-          toggleGyro();
-        });
-      }
-
-      if (btnToggleGyroHud) {
-        btnToggleGyroHud.addEventListener('click', function (e) {
-          e.stopPropagation();
-          toggleGyro();
-        });
-      }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
       // Direction C: 3D Tour Demo Event Listeners
 
@@ -39199,17 +39147,20 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
 
 
 
-          if (isGyroActive) {
+          if (isGyroActive && hasGyroReading) {
             // Smooth Lerp filter for silky anti-jitter transition
             currentGyroPhase += (rawTiltTarget - currentGyroPhase) * 0.20;
             state.lenticularManualPhase = currentGyroPhase;
+            state.lenticularAuto = false;
+            lenticularUniforms.uAuto.value = 0.0;
+            lenticularUniforms.uPhase.value = currentGyroPhase;
             const sliderLent = document.getElementById('sliderLentAngle');
             if (sliderLent) sliderLent.value = Math.round(currentGyroPhase * 100);
           }
 
           let dominantPhase = state.lenticularManualPhase;
           let tiltAngleDeg = (dominantPhase - 0.5) * 60;
-          if (isGyroActive) {
+          if (isGyroActive && hasGyroReading) {
             tiltAngleDeg = (dominantPhase - 0.5) * 44;
           }
 

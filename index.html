@@ -2550,15 +2550,9 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
 
 
       <div id="lenticularAngleIndicator" class="absolute bottom-3 sm:bottom-4 right-2 sm:right-3 z-20 glass-panel rounded-2xl p-2.5 shadow-xl border border-white/70 text-xs w-36 sm:w-40 backdrop-blur-xl transition-all select-none cursor-pointer" title="點擊切換視角連動 / 手動鎖定">
-        <!-- Minimal Top Controls: Status Dot, Gyro Toggle & Close Button -->
-        <div class="flex items-center justify-between mb-1 px-0.5">
-          <div class="flex items-center gap-1.5">
-            <span id="lentHudStatusDot" class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-            <span class="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider font-mono">Lenticular</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <button type="button" id="btnCloseLentHud" class="w-4 h-4 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-black/5 transition text-xs leading-none" title="關閉 HUD">×</button>
-          </div>
+        <!-- Minimal Top Controls: Close Button Only -->
+        <div class="flex items-center justify-end mb-0.5 px-0.5">
+          <button type="button" id="btnCloseLentHud" class="w-4 h-4 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-black/5 transition text-xs leading-none" title="關閉 HUD">×</button>
         </div>
 
         <!-- Gauge Arc Visualizer -->
@@ -2583,7 +2577,7 @@ html body #gestureHint span.text-amber-300 { color: #b45309 !important; }
         </div>
 
         <!-- Integrated Crisp Readout (No nested box) -->
-        <div id="lenticularAngleLabel" class="font-bold text-[10.5px] sm:text-[11px] text-slate-800 font-mono tracking-tight text-center mt-1 truncate">0.0° ・ 階段 2 (藍/綠)</div>
+        <div id="lenticularAngleLabel" class="font-bold text-[10.5px] sm:text-[11px] text-slate-800 font-mono tracking-tight text-center mt-1 truncate">0.0° ・ 藍/綠</div>
       </div>
 
       <!-- Quick Toggles moved to Header -->
@@ -30999,7 +30993,7 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
 
 
 
-          const names = ['階段1 (紅/藍)', '階段2 (藍/綠)', '階段3 (綠/紅)'];
+          const names = ['紅/藍', '藍/綠', '綠/紅'];
 
 
 
@@ -39322,7 +39316,7 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
 
 
 
-            phaseShort = '階段 1 (紅/藍)';
+            phaseShort = '紅/藍';
 
 
 
@@ -39346,7 +39340,7 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
 
 
 
-            phaseShort = '階段 2 (藍/綠)';
+            phaseShort = '藍/綠';
 
 
 
@@ -39370,7 +39364,7 @@ addCdAnnulus(58, 59.5, cdMirrorMat, z);
 
 
 
-            phaseShort = '階段 3 (綠/紅)';
+            phaseShort = '綠/紅';
 
 
 
